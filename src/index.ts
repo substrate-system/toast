@@ -117,6 +117,14 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
         }
     }
 
+    disconnectedCallback () {
+        const i = visibleToasts.indexOf(this)
+        if (i !== -1) {
+            visibleToasts.splice(i, 1)
+            layoutToasts()
+        }
+    }
+
     async attributeChangedCallback (
         name:string,
         oldValue:string|null,
