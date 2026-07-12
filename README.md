@@ -20,12 +20,13 @@
   * [ESM](#esm)
   * [Common JS](#common-js)
 - [Example](#example)
-  * [Example CSS](#example-css)
+  * [Positioning](#positioning)
 - [Attributes](#attributes)
   * [`open`](#open)
   * [`timeout`](#timeout)
   * [`noclose`](#noclose)
   * [`notimer`](#notimer)
+  * [`position`](#position)
   * [Variants](#variants)
 - [Events](#events)
   * [`substrate-toast:show`](#substrate-toastshow)
@@ -37,6 +38,7 @@
   * [Import CSS](#import-css)
   * [CSS Variables](#css-variables)
     + [Layout & Typography](#layout--typography)
+    + [Stacking & Position](#stacking--position)
     + [Primary Variant](#primary-variant)
     + [Success Variant](#success-variant)
     + [Neutral Variant](#neutral-variant)
@@ -88,17 +90,16 @@ document.body.appendChild(toast)
 toast.toast()
 ```
 
-### Example CSS
+### Positioning
 
-Set the toast position to be center bottom (default is top right).
+Set the `position` attribute to change where toasts anchor (default is
+`top-right`). See [`position`](#position) below for all six values and
+the stacking behavior.
 
-```css
-substrate-toast {
-    position: fixed;
-    left: 50%;
-    bottom: 2rem;
-    transform: translateX(-50%);
-}
+```html
+<substrate-toast position="bottom-center">
+    Anchored to bottom center
+</substrate-toast>
 ```
 
 ## Attributes
@@ -169,6 +170,32 @@ down. It is only visible when a close button is present.
 </substrate-toast>
 ```
 
+### `position`
+**Type:** String
+**Default:** `top-right`
+**Valid Values:** `top-right`, `top-left`, `bottom-right`,
+`bottom-left`, `top-center`, `bottom-center`
+
+Anchors the toast to one of six screen positions and determines the
+stack direction. Multiple toasts in the same position stack instead of
+overlapping: the newest toast is added furthest from the anchored edge,
+and toasts already showing do not move when a new one is added. When a
+toast is dismissed, the rest of its stack glides toward the anchored
+edge.
+
+`timeout="0"` and `noclose` toasts are sticky -- they stay until
+dismissed manually and coexist with transient toasts; they no longer
+block other toasts from showing.
+
+```html
+<substrate-toast position="bottom-left">Bottom left</substrate-toast>
+<substrate-toast position="top-center">Top center</substrate-toast>
+```
+
+Positioning is controlled entirely by this attribute. Overriding
+`top`/`bottom`/`left`/`inset-inline-end` on `substrate-toast` in your own
+CSS no longer determines stack direction -- use `position` instead.
+
 ### Variants
 
 **Type:** Boolean (mutually exclusive)
@@ -233,8 +260,8 @@ toast.addEventListener(SubstrateToast.event('hide'), (ev) => {
 ## Methods
 
 ### `toast()`
-Display the toast by adding it to the queue and triggering the show animation.
-Toasts display sequentially - only one toast is visible at a time.
+Display the toast. Multiple toasts can be visible at once -- see
+[`position`](#position) for how simultaneous toasts stack.
 
 ```js
 const toast = document.querySelector('substrate-toast')
@@ -242,7 +269,8 @@ toast.toast()
 ```
 
 ### `hide()`
-Hide the currently visible toast and process the next one in the queue.
+Hide this toast. The rest of its position's stack reflows toward the
+anchored edge.
 
 ```js
 const toast = document.querySelector('substrate-toast')
@@ -274,6 +302,11 @@ You can override these CSS variables:
 - `--toast-line-height` - Line height of toast content (default: `1.5`)
 - `--toast-max-width` - Maximum width of the toast (default: `24rem`)
 - `--toast-border` - Border color (default: `#0003`)
+
+#### Stacking & Position
+- `--toast-stack-gap` - Space between stacked toasts in the same
+  position (default: `0.75rem`)
+- `--toast-inset` - Distance from the anchored edge (default: `1rem`)
 
 #### Primary Variant
 - `--toast-primary-bg` - Background color (default: `#fff`)
