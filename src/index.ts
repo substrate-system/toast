@@ -34,16 +34,14 @@ export const VARIANTS:ToastVariant[] = [
     'danger'
 ]
 
-export type ToastPosition =
-    'top-right'|'top-left'|'bottom-right'|
-    'bottom-left'|'top-center'|'bottom-center'
-
 const STACK_GAP = 12  // px; keep in sync with --toast-stack-gap in index.css
 
-const POSITIONS:ToastPosition[] = [
+const POSITIONS = [
     'top-right', 'top-left', 'bottom-right',
     'bottom-left', 'top-center', 'bottom-center'
-]
+] as const
+
+export type ToastPosition = typeof POSITIONS[number]
 
 function isToastPosition (
     value:string|null

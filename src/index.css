@@ -52,8 +52,6 @@ substrate-toast {
     /* Position: fixed; the exact edge is set by the anchor rules
        below, keyed off the `position` attribute (default top-right) */
     position: fixed;
-    top: var(--toast-inset);
-    inset-inline-end: var(--toast-inset);
     z-index: 1000;
     transform:
         translateX(var(--toast-x, 0))

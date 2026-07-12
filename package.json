@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "lint": "eslint .",
-    "test": "esbuild ./test/index.ts --bundle | tapout -t 30000",
+    "test": "esbuild ./test/index.ts --bundle --loader:.css=text | tapout -t 30000",
     "build-css": "lightningcss --nesting src/index.css -o dist/index.css",
     "build-css:min": "lightningcss --nesting --minify src/index.css -o dist/index.min.css",
     "build-cjs": "esbuild src/*.ts --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",

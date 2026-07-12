@@ -2,48 +2,11 @@ import { test } from '@substrate-system/tapzero'
 import { waitFor, click, sleep } from '@substrate-system/dom'
 import { type SubstrateToast } from '../src/index.js'
 import '../src/index.js'
+import cssText from '../src/index.css'
 
-// Load CSS for tests
+// Load CSS for tests (import real CSS from src/index.css)
 const style = document.createElement('style')
-style.textContent = `
-substrate-toast {
-    --toast-inset: 1rem;
-    position: fixed;
-    z-index: 1000;
-}
-
-substrate-toast:not([position]),
-substrate-toast[position="top-left"],
-substrate-toast[position="top-right"],
-substrate-toast[position="top-center"] {
-    top: var(--toast-inset);
-}
-
-substrate-toast[position="bottom-left"],
-substrate-toast[position="bottom-right"],
-substrate-toast[position="bottom-center"] {
-    bottom: var(--toast-inset);
-}
-
-substrate-toast:not([position]),
-substrate-toast[position="top-right"],
-substrate-toast[position="bottom-right"] {
-    inset-inline-end: var(--toast-inset);
-}
-
-substrate-toast[position="top-left"],
-substrate-toast[position="bottom-left"] {
-    left: var(--toast-inset);
-    inset-inline-end: auto;
-}
-
-substrate-toast[position="top-center"],
-substrate-toast[position="bottom-center"] {
-    left: 50%;
-    inset-inline-end: auto;
-    --toast-x: -50%;
-}
-`
+style.textContent = cssText as unknown as string
 document.head.appendChild(style)
 
 // ============================================================================
@@ -434,6 +397,23 @@ test('a top-center toast is anchored to the top edge', async t => {
 
     t.equal(getComputedStyle(tc).top, '16px',
         'top-center toast is anchored 1rem (16px) from the top edge')
+})
+
+test('a bottom-anchored toast has top set to auto (regression: both top and bottom were set)', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="br" position="bottom-right" timeout="0">Bottom right</substrate-toast>
+    `
+    await waitFor('#br')
+    const br = document.getElementById('br') as SubstrateToast
+    br.toast()
+    await sleep(50)
+
+    const computed = getComputedStyle(br)
+    t.equal(computed.top, 'auto',
+        'bottom-anchored toast should have top:auto, not top:1rem')
+    t.equal(computed.bottom, '16px',
+        'bottom-anchored toast should have bottom set to 1rem (16px)')
 })
 
 // ============================================================================
