@@ -350,8 +350,9 @@ substrate-toast {
 
 #### Fixed Values
 
-The gap between stacked toasts (12px) is currently fixed and not CSS-overridable.
-This setting is documented here for reference and future compatibility.
+The gap between stacked toasts (12px) is currently fixed and not
+CSS-overridable. This setting is documented here for reference and
+future compatibility.
 
 
 -------
