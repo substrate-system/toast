@@ -385,6 +385,27 @@ test('bottom-anchored stacks offset in the negative direction', async t => {
         'Second toast in a bottom-anchored stack has a negative offset')
 })
 
+test('removing a toast from the DOM directly deregisters it and reflows the rest', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="d1" timeout="0">First</substrate-toast>
+        <substrate-toast id="d2" timeout="0">Second</substrate-toast>
+    `
+    await waitFor('#d1', { visible: false })
+    const d1 = document.getElementById('d1') as SubstrateToast
+    const d2 = document.getElementById('d2') as SubstrateToast
+
+    d1.toast()
+    await sleep(50)
+    d2.toast()
+    await sleep(50)
+
+    d1.remove()
+
+    t.equal(d2.style.getPropertyValue('--toast-offset'), '0px',
+        'Second toast recomputes to offset 0 after the first is removed from the DOM directly (not via hide())')
+})
+
 test('a top-center toast is anchored to the top edge', async t => {
     clearToasts()
     document.body.innerHTML = `
