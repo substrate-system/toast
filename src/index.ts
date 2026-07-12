@@ -35,8 +35,8 @@ export const VARIANTS:ToastVariant[] = [
 ]
 
 // Global toast queue
-const toastQueue:SubstrateToast[] = []  // eslint-disable-line
-let currentToast:SubstrateToast|null = null  // eslint-disable-line
+const toastQueue:SubstrateToast[] = []
+let currentToast:SubstrateToast|null = null
 
 export class SubstrateToast extends WebComponent.create('substrate-toast') {
     static observedAttributes = [
