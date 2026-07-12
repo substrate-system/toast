@@ -246,49 +246,96 @@ test('should return to neutral when variant attribute is removed', async t => {
 })
 
 // ============================================================================
-// Queue Tests
+// Stacking Tests
 // ============================================================================
 
-test('should create multiple toasts', async t => {
+test('multiple transient toasts all become visible (no serialisation)', async t => {
     clearToasts()
-
     document.body.innerHTML = `
-        <substrate-toast id="toast1" open timeout="300">
-            First
-        </substrate-toast>
-        <substrate-toast id="toast2" open timeout="300">
-            Second
-        </substrate-toast>
-        <substrate-toast id="toast3" open timeout="300">
-            Third
-        </substrate-toast>
+        <substrate-toast id="t1" timeout="3000">First</substrate-toast>
+        <substrate-toast id="t2" timeout="3000">Second</substrate-toast>
     `
+    await waitFor('#t1')
+    const t1 = document.getElementById('t1') as SubstrateToast
+    const t2 = document.getElementById('t2') as SubstrateToast
 
-    await waitFor('substrate-toast')
+    t1.toast()
+    t2.toast()
+    await sleep(50)
 
-    const toast1 = document.getElementById('toast1')
-    const toast2 = document.getElementById('toast2')
-    const toast3 = document.getElementById('toast3')
-
-    t.ok(toast1, 'First toast should exist')
-    t.ok(toast2, 'Second toast should exist')
-    t.ok(toast3, 'Third toast should exist')
+    t.ok(t1.classList.contains('toast-visible'), 'First toast visible')
+    t.ok(t2.classList.contains('toast-visible'), 'Second toast visible')
 })
 
-test('should have toast and hide methods', async t => {
+test('a sticky toast does not block a later transient toast', async t => {
     clearToasts()
-
     document.body.innerHTML = `
-        <substrate-toast class="t1" open timeout="0">
-            Toast 1
-        </substrate-toast>
+        <substrate-toast id="sticky" timeout="0">Sticky</substrate-toast>
     `
+    await waitFor('#sticky')
+    const sticky = document.getElementById('sticky') as SubstrateToast
+    sticky.toast()
+    await sleep(50)
+    t.ok(sticky.classList.contains('toast-visible'), 'Sticky toast visible')
 
-    const toast = await waitFor('substrate-toast') as SubstrateToast
-    t.ok(typeof toast.toast === 'function',
-        'Should have toast method')
-    t.ok(typeof toast.hide === 'function',
-        'Should have hide method')
+    // Use insertAdjacentHTML, not `innerHTML +=`: the latter serialises
+    // and re-parses the whole body, detaching `sticky` (which is already
+    // registered in visibleToasts) without ever calling disconnectedCallback
+    // (that lands in Phase 4), leaking a stale entry into the registry
+    // for the rest of the test run.
+    document.body.insertAdjacentHTML('beforeend', `
+        <substrate-toast id="transient" timeout="3000">Transient</substrate-toast>
+    `)
+    await waitFor('#transient')
+    const transient = document.getElementById('transient') as SubstrateToast
+    transient.toast()
+    await sleep(50)
+
+    t.ok(transient.classList.contains('toast-visible'),
+        'Transient toast becomes visible while the sticky toast is still showing')
+})
+
+test('the second toast in a stack gets a non-zero offset, the first stays at 0', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="s1" timeout="0">First</substrate-toast>
+        <substrate-toast id="s2" timeout="0">Second</substrate-toast>
+    `
+    await waitFor('#s1')
+    const s1 = document.getElementById('s1') as SubstrateToast
+    const s2 = document.getElementById('s2') as SubstrateToast
+
+    s1.toast()
+    await sleep(50)
+    s2.toast()
+    await sleep(50)
+
+    t.equal(s1.style.getPropertyValue('--toast-offset'), '0px',
+        'First toast sits at offset 0')
+    const secondOffset = s2.style.getPropertyValue('--toast-offset')
+    t.ok(secondOffset !== '' && secondOffset !== '0px',
+        'Second toast has a non-zero offset')
+})
+
+test('the remaining toast reflows to offset 0 when the first is hidden', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="r1" timeout="0">First</substrate-toast>
+        <substrate-toast id="r2" timeout="0">Second</substrate-toast>
+    `
+    await waitFor('#r1')
+    const r1 = document.getElementById('r1') as SubstrateToast
+    const r2 = document.getElementById('r2') as SubstrateToast
+
+    r1.toast()
+    await sleep(50)
+    r2.toast()
+    await sleep(50)
+
+    r1.hide()
+
+    t.equal(r2.style.getPropertyValue('--toast-offset'), '0px',
+        'Second toast recomputes to offset 0 immediately after the first is hidden')
 })
 
 // ============================================================================
@@ -324,5 +371,8 @@ test('all done', () => {
 
 // Helper to clear DOM between tests
 function clearToasts () {
-    document.querySelectorAll('substrate-toast').forEach(el => el.remove())
+    document.querySelectorAll('substrate-toast').forEach(el => {
+        (el as SubstrateToast).hide()
+        el.remove()
+    })
 }
