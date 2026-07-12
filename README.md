@@ -45,6 +45,7 @@
     + [Warning Variant](#warning-variant)
     + [Danger Variant](#danger-variant)
     + [CSS Variable Example](#css-variable-example)
+    + [Fixed Values](#fixed-values)
 - [Use](#use)
   * [JS](#js)
   * [HTML](#html)
@@ -304,8 +305,6 @@ You can override these CSS variables:
 - `--toast-border` - Border color (default: `#0003`)
 
 #### Stacking & Position
-- `--toast-stack-gap` - Spacing between stacked toasts in the same
-  position (currently a fixed `12px` gap; CSS override not supported)
 - `--toast-inset` - Distance from the anchored edge (default: `1rem`)
 
 #### Primary Variant
@@ -348,6 +347,11 @@ substrate-toast {
     --toast-success-border: #22c55e;
 }
 ```
+
+#### Fixed Values
+
+The gap between stacked toasts (12px) is currently fixed and not CSS-overridable.
+This setting is documented here for reference and future compatibility.
 
 
 -------
