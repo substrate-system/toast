@@ -3,6 +3,49 @@ import { waitFor, click, sleep } from '@substrate-system/dom'
 import { type SubstrateToast } from '../src/index.js'
 import '../src/index.js'
 
+// Load CSS for tests
+const style = document.createElement('style')
+style.textContent = `
+substrate-toast {
+    --toast-inset: 1rem;
+    position: fixed;
+    z-index: 1000;
+}
+
+substrate-toast:not([position]),
+substrate-toast[position="top-left"],
+substrate-toast[position="top-right"],
+substrate-toast[position="top-center"] {
+    top: var(--toast-inset);
+}
+
+substrate-toast[position="bottom-left"],
+substrate-toast[position="bottom-right"],
+substrate-toast[position="bottom-center"] {
+    bottom: var(--toast-inset);
+}
+
+substrate-toast:not([position]),
+substrate-toast[position="top-right"],
+substrate-toast[position="bottom-right"] {
+    inset-inline-end: var(--toast-inset);
+}
+
+substrate-toast[position="top-left"],
+substrate-toast[position="bottom-left"] {
+    left: var(--toast-inset);
+    inset-inline-end: auto;
+}
+
+substrate-toast[position="top-center"],
+substrate-toast[position="bottom-center"] {
+    left: 50%;
+    inset-inline-end: auto;
+    --toast-x: -50%;
+}
+`
+document.head.appendChild(style)
+
 // ============================================================================
 // Basic Rendering Tests
 // ============================================================================
@@ -336,6 +379,61 @@ test('the remaining toast reflows to offset 0 when the first is hidden', async t
 
     t.equal(r2.style.getPropertyValue('--toast-offset'), '0px',
         'Second toast recomputes to offset 0 immediately after the first is hidden')
+})
+
+test('toasts in different positions get independent offset-0 groups', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="tr" position="top-right" timeout="0">TR</substrate-toast>
+        <substrate-toast id="bl" position="bottom-left" timeout="0">BL</substrate-toast>
+    `
+    await waitFor('#tr')
+    const tr = document.getElementById('tr') as SubstrateToast
+    const bl = document.getElementById('bl') as SubstrateToast
+
+    tr.toast()
+    await sleep(50)
+    bl.toast()
+    await sleep(50)
+
+    t.equal(tr.style.getPropertyValue('--toast-offset'), '0px',
+        'top-right toast is at offset 0')
+    t.equal(bl.style.getPropertyValue('--toast-offset'), '0px',
+        'bottom-left toast is at its own offset 0, independent of the top-right group')
+})
+
+test('bottom-anchored stacks offset in the negative direction', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="br1" position="bottom-right" timeout="0">First</substrate-toast>
+        <substrate-toast id="br2" position="bottom-right" timeout="0">Second</substrate-toast>
+    `
+    await waitFor('#br1')
+    const br1 = document.getElementById('br1') as SubstrateToast
+    const br2 = document.getElementById('br2') as SubstrateToast
+
+    br1.toast()
+    await sleep(50)
+    br2.toast()
+    await sleep(50)
+
+    const offset = br2.style.getPropertyValue('--toast-offset')
+    t.ok(offset.startsWith('-'),
+        'Second toast in a bottom-anchored stack has a negative offset')
+})
+
+test('a top-center toast is anchored to the top edge', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="tc" position="top-center" timeout="0">Top center</substrate-toast>
+    `
+    await waitFor('#tc')
+    const tc = document.getElementById('tc') as SubstrateToast
+    tc.toast()
+    await sleep(50)
+
+    t.equal(getComputedStyle(tc).top, '16px',
+        'top-center toast is anchored 1rem (16px) from the top edge')
 })
 
 // ============================================================================

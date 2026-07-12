@@ -40,6 +40,17 @@ export type ToastPosition =
 
 const STACK_GAP = 12  // px; keep in sync with --toast-stack-gap in index.css
 
+const POSITIONS:ToastPosition[] = [
+    'top-right', 'top-left', 'bottom-right',
+    'bottom-left', 'top-center', 'bottom-center'
+]
+
+function isToastPosition (
+    value:string|null
+):value is ToastPosition {
+    return POSITIONS.includes(value as ToastPosition)
+}
+
 // Toasts currently visible, in show order (append = newest)
 const visibleToasts:SubstrateToast[] = []
 
@@ -49,6 +60,7 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
         'noclose',
         'timeout',
         'notimer',
+        'position',
         ...VARIANTS
     ]
 
@@ -81,6 +93,11 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
                 this._timeout = Infinity
             }
         }
+
+        const positionAttr = this.getAttribute('position')
+        this._position = isToastPosition(positionAttr) ?
+            positionAttr :
+            'top-right'
 
         this._showTimer = !(this.hasAttribute('notimer'))
 
@@ -155,6 +172,13 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
 
     handleChange_notimer (_oldValue:string, newValue:string|null) {
         this._showTimer = (newValue === null)
+    }
+
+    handleChange_position (_oldValue:string, newValue:string|null) {
+        this._position = isToastPosition(newValue) ?
+            newValue :
+            'top-right'
+        layoutToasts()
     }
 
     /**
