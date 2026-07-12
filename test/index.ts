@@ -158,7 +158,7 @@ test('programmatic toast() method exists', async t => {
         </substrate-toast>
     `
 
-    const toast = await waitFor('substrate-toast') as SubstrateToast
+    const toast = await waitFor('substrate-toast', { visible: false }) as SubstrateToast
     t.ok(toast, 'Toast should exist')
     t.equal(typeof toast.toast, 'function',
         'Should have toast() method')
@@ -217,7 +217,7 @@ test('should update variant class and icon when variant changes', async t => {
     toast.textContent = 'Variant change'
     document.body.appendChild(toast)
 
-    const inner = await waitFor('substrate-toast .toast')
+    const inner = await waitFor('substrate-toast .toast', { visible: false })
     const icon = toast.querySelector('.toast-icon')
     const initialIcon = icon?.innerHTML
 
@@ -237,7 +237,7 @@ test('should return to neutral when variant attribute is removed', async t => {
     toast.textContent = 'Variant removal'
     document.body.appendChild(toast)
 
-    const inner = await waitFor('substrate-toast .toast')
+    const inner = await waitFor('substrate-toast .toast', { visible: false })
 
     toast.setAttribute('success', '')
     await Promise.resolve()
@@ -261,7 +261,7 @@ test('multiple transient toasts all become visible (no serialisation)', async t 
         <substrate-toast id="t1" timeout="3000">First</substrate-toast>
         <substrate-toast id="t2" timeout="3000">Second</substrate-toast>
     `
-    await waitFor('#t1')
+    await waitFor('#t1', { visible: false })
     const t1 = document.getElementById('t1') as SubstrateToast
     const t2 = document.getElementById('t2') as SubstrateToast
 
@@ -278,7 +278,7 @@ test('a sticky toast does not block a later transient toast', async t => {
     document.body.innerHTML = `
         <substrate-toast id="sticky" timeout="0">Sticky</substrate-toast>
     `
-    await waitFor('#sticky')
+    await waitFor('#sticky', { visible: false })
     const sticky = document.getElementById('sticky') as SubstrateToast
     sticky.toast()
     await sleep(50)
@@ -292,7 +292,7 @@ test('a sticky toast does not block a later transient toast', async t => {
     document.body.insertAdjacentHTML('beforeend', `
         <substrate-toast id="transient" timeout="3000">Transient</substrate-toast>
     `)
-    await waitFor('#transient')
+    await waitFor('#transient', { visible: false })
     const transient = document.getElementById('transient') as SubstrateToast
     transient.toast()
     await sleep(50)
@@ -307,7 +307,7 @@ test('the second toast in a stack gets a non-zero offset, the first stays at 0',
         <substrate-toast id="s1" timeout="0">First</substrate-toast>
         <substrate-toast id="s2" timeout="0">Second</substrate-toast>
     `
-    await waitFor('#s1')
+    await waitFor('#s1', { visible: false })
     const s1 = document.getElementById('s1') as SubstrateToast
     const s2 = document.getElementById('s2') as SubstrateToast
 
@@ -329,7 +329,7 @@ test('the remaining toast reflows to offset 0 when the first is hidden', async t
         <substrate-toast id="r1" timeout="0">First</substrate-toast>
         <substrate-toast id="r2" timeout="0">Second</substrate-toast>
     `
-    await waitFor('#r1')
+    await waitFor('#r1', { visible: false })
     const r1 = document.getElementById('r1') as SubstrateToast
     const r2 = document.getElementById('r2') as SubstrateToast
 
@@ -350,7 +350,7 @@ test('toasts in different positions get independent offset-0 groups', async t =>
         <substrate-toast id="tr" position="top-right" timeout="0">TR</substrate-toast>
         <substrate-toast id="bl" position="bottom-left" timeout="0">BL</substrate-toast>
     `
-    await waitFor('#tr')
+    await waitFor('#tr', { visible: false })
     const tr = document.getElementById('tr') as SubstrateToast
     const bl = document.getElementById('bl') as SubstrateToast
 
@@ -371,7 +371,7 @@ test('bottom-anchored stacks offset in the negative direction', async t => {
         <substrate-toast id="br1" position="bottom-right" timeout="0">First</substrate-toast>
         <substrate-toast id="br2" position="bottom-right" timeout="0">Second</substrate-toast>
     `
-    await waitFor('#br1')
+    await waitFor('#br1', { visible: false })
     const br1 = document.getElementById('br1') as SubstrateToast
     const br2 = document.getElementById('br2') as SubstrateToast
 
@@ -390,7 +390,7 @@ test('a top-center toast is anchored to the top edge', async t => {
     document.body.innerHTML = `
         <substrate-toast id="tc" position="top-center" timeout="0">Top center</substrate-toast>
     `
-    await waitFor('#tc')
+    await waitFor('#tc', { visible: false })
     const tc = document.getElementById('tc') as SubstrateToast
     tc.toast()
     await sleep(50)
@@ -404,7 +404,7 @@ test('a bottom-anchored toast has top set to auto (regression: both top and bott
     document.body.innerHTML = `
         <substrate-toast id="br" position="bottom-right" timeout="0">Bottom right</substrate-toast>
     `
-    await waitFor('#br')
+    await waitFor('#br', { visible: false })
     const br = document.getElementById('br') as SubstrateToast
     br.toast()
     await sleep(50)
