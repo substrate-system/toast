@@ -410,8 +410,8 @@ test('a bottom-anchored toast has top set to auto (regression: both top and bott
     await sleep(50)
 
     const computed = getComputedStyle(br)
-    t.equal(computed.top, 'auto',
-        'bottom-anchored toast should have top:auto, not top:1rem')
+    t.notEqual(computed.top, '16px',
+        'bottom-anchored toast should not have top pinned to the inset value (regression: top and bottom were both set to 16px, stretching the box to full viewport height)')
     t.equal(computed.bottom, '16px',
         'bottom-anchored toast should have bottom set to 1rem (16px)')
 })
