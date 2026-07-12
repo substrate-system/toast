@@ -27,6 +27,7 @@
   * [`noclose`](#noclose)
   * [`notimer`](#notimer)
   * [`position`](#position)
+    + [Stacking](#stacking)
   * [Variants](#variants)
 - [Events](#events)
   * [`substrate-toast:show`](#substrate-toastshow)
@@ -172,13 +173,18 @@ down. It is only visible when a close button is present.
 ```
 
 ### `position`
+
 **Type:** String
 **Default:** `top-right`
 **Valid Values:** `top-right`, `top-left`, `bottom-right`,
 `bottom-left`, `top-center`, `bottom-center`
 
 Anchors the toast to one of six screen positions and determines the
-stack direction. Multiple toasts in the same position stack instead of
+stack direction.
+
+#### Stacking
+
+Multiple toasts in the same position stack instead of
 overlapping: the newest toast is added furthest from the anchored edge,
 and toasts already showing do not move when a new one is added. When a
 toast is dismissed, the rest of its stack glides toward the anchored
