@@ -304,8 +304,8 @@ You can override these CSS variables:
 - `--toast-border` - Border color (default: `#0003`)
 
 #### Stacking & Position
-- `--toast-stack-gap` - Space between stacked toasts in the same
-  position (default: `0.75rem`)
+- `--toast-stack-gap` - Spacing between stacked toasts in the same
+  position (currently a fixed `12px` gap; CSS override not supported)
 - `--toast-inset` - Distance from the anchored edge (default: `1rem`)
 
 #### Primary Variant
