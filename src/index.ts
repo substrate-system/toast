@@ -26,25 +26,6 @@ declare global {
     }
 }
 
-function processToastQueue ():void {
-    // If there's already a toast showing, don't process queue
-    if (currentToast) return
-
-    // If queue is empty, nothing to do
-    if (toastQueue.length === 0) return
-
-    // Get next toast from queue
-    const toast = toastQueue.shift()
-    if (!toast) return
-
-    currentToast = toast
-
-    // Trigger show animation
-    requestAnimationFrame(() => {
-        toast._showToast()
-    })
-}
-
 export const VARIANTS:ToastVariant[] = [
     'primary',
     'success',
@@ -53,9 +34,23 @@ export const VARIANTS:ToastVariant[] = [
     'danger'
 ]
 
-// Global toast queue
-const toastQueue:SubstrateToast[] = []  // eslint-disable-line
-let currentToast:SubstrateToast|null = null  // eslint-disable-line
+const STACK_GAP = 12  // px; keep in sync with --toast-stack-gap in index.css
+
+const POSITIONS = [
+    'top-right', 'top-left', 'bottom-right',
+    'bottom-left', 'top-center', 'bottom-center'
+] as const
+
+export type ToastPosition = typeof POSITIONS[number]
+
+function isToastPosition (
+    value:string|null
+):value is ToastPosition {
+    return POSITIONS.includes(value as ToastPosition)
+}
+
+// Toasts currently visible, in show order (append = newest)
+const visibleToasts:SubstrateToast[] = []
 
 export class SubstrateToast extends WebComponent.create('substrate-toast') {
     static observedAttributes = [
@@ -63,6 +58,7 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
         'noclose',
         'timeout',
         'notimer',
+        'position',
         ...VARIANTS
     ]
 
@@ -78,6 +74,7 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
     private _progressCircle:SVGCircleElement|null = null
     private _progressSvg:SVGSVGElement|null = null
     private _startTime:number|null = null
+    _position:ToastPosition = 'top-right'
 
     DEFAULT_TIMEOUT:number = 6000
 
@@ -94,6 +91,11 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
                 this._timeout = Infinity
             }
         }
+
+        const positionAttr = this.getAttribute('position')
+        this._position = isToastPosition(positionAttr) ?
+            positionAttr :
+            'top-right'
 
         this._showTimer = !(this.hasAttribute('notimer'))
 
@@ -112,6 +114,14 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
 
         if (this._open) {
             this.toast()
+        }
+    }
+
+    disconnectedCallback () {
+        const i = visibleToasts.indexOf(this)
+        if (i !== -1) {
+            visibleToasts.splice(i, 1)
+            layoutToasts()
         }
     }
 
@@ -170,24 +180,33 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
         this._showTimer = (newValue === null)
     }
 
-    /**
-     * Show the toast, use the timeout attribute.
-     * Add toast to queue to be displayed sequentially.
-     */
-    toast ():void {
-        toastQueue.push(this)
-        processToastQueue()
+    handleChange_position (_oldValue:string, newValue:string|null) {
+        this._position = isToastPosition(newValue) ?
+            newValue :
+            'top-right'
+        layoutToasts()
     }
 
     /**
-     * Internal method to actually show the toast.
-     * Called by the queue processor.
+     * Show the toast, use the timeout attribute.
+     */
+    toast ():void {
+        requestAnimationFrame(() => this._showToast())
+    }
+
+    /**
+     * Internal method to actually show the toast and add it to the
+     * visible-toast registry.
      */
     _showToast ():void {
+        if (!visibleToasts.includes(this)) {
+            visibleToasts.push(this)
+        }
         this.classList.add('toast-visible')
         this.emit<ToastShowDetail>('show', {
             detail: { variant: this._variant }
         })
+        layoutToasts()
 
         // Auto-hide after timeout
         if (this._timeout !== Infinity && this._timeout > 0) {
@@ -237,17 +256,17 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
     hide () {
         this.classList.remove('toast-visible')
 
+        const i = visibleToasts.indexOf(this)
+        if (i !== -1) {
+            visibleToasts.splice(i, 1)
+            layoutToasts()
+        }
+
         // Wait for animation to complete
         setTimeout(() => {
             this.emit<ToastHideDetail>('hide', {
                 detail: { variant: this._variant }
             })
-
-            // Clear current toast and process next in queue
-            if (currentToast === this) {
-                currentToast = null
-                processToastQueue()
-            }
         }, 300)
 
         if (this._timeoutId !== null) {
@@ -372,3 +391,25 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
 }
 
 define('substrate-toast', SubstrateToast)
+
+function layoutToasts ():void {
+    const groups = new Map<ToastPosition, SubstrateToast[]>()
+    for (const t of visibleToasts) {
+        const pos = t._position
+        const list = groups.get(pos) || []
+        list.push(t)
+        groups.set(pos, list)
+    }
+
+    for (const [pos, list] of groups) {
+        const sign = pos.startsWith('bottom') ? -1 : 1
+        let offset = 0
+        for (const t of list) {
+            t.style.setProperty(
+                '--toast-offset',
+                (sign * offset) + 'px'
+            )
+            offset += t.offsetHeight + STACK_GAP
+        }
+    }
+}

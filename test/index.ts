@@ -2,6 +2,12 @@ import { test } from '@substrate-system/tapzero'
 import { waitFor, click, sleep } from '@substrate-system/dom'
 import { type SubstrateToast } from '../src/index.js'
 import '../src/index.js'
+import cssText from '../src/index.css'
+
+// Load CSS for tests (import real CSS from src/index.css)
+const style = document.createElement('style')
+style.textContent = cssText as unknown as string
+document.head.appendChild(style)
 
 // ============================================================================
 // Basic Rendering Tests
@@ -152,7 +158,7 @@ test('programmatic toast() method exists', async t => {
         </substrate-toast>
     `
 
-    const toast = await waitFor('substrate-toast') as SubstrateToast
+    const toast = await waitFor('substrate-toast', { visible: false }) as SubstrateToast
     t.ok(toast, 'Toast should exist')
     t.equal(typeof toast.toast, 'function',
         'Should have toast() method')
@@ -211,7 +217,7 @@ test('should update variant class and icon when variant changes', async t => {
     toast.textContent = 'Variant change'
     document.body.appendChild(toast)
 
-    const inner = await waitFor('substrate-toast .toast')
+    const inner = await waitFor('substrate-toast .toast', { visible: false })
     const icon = toast.querySelector('.toast-icon')
     const initialIcon = icon?.innerHTML
 
@@ -231,7 +237,7 @@ test('should return to neutral when variant attribute is removed', async t => {
     toast.textContent = 'Variant removal'
     document.body.appendChild(toast)
 
-    const inner = await waitFor('substrate-toast .toast')
+    const inner = await waitFor('substrate-toast .toast', { visible: false })
 
     toast.setAttribute('success', '')
     await Promise.resolve()
@@ -246,49 +252,189 @@ test('should return to neutral when variant attribute is removed', async t => {
 })
 
 // ============================================================================
-// Queue Tests
+// Stacking Tests
 // ============================================================================
 
-test('should create multiple toasts', async t => {
+test('multiple transient toasts all become visible (no serialisation)', async t => {
     clearToasts()
-
     document.body.innerHTML = `
-        <substrate-toast id="toast1" open timeout="300">
-            First
-        </substrate-toast>
-        <substrate-toast id="toast2" open timeout="300">
-            Second
-        </substrate-toast>
-        <substrate-toast id="toast3" open timeout="300">
-            Third
-        </substrate-toast>
+        <substrate-toast id="t1" timeout="3000">First</substrate-toast>
+        <substrate-toast id="t2" timeout="3000">Second</substrate-toast>
     `
+    await waitFor('#t1', { visible: false })
+    const t1 = document.getElementById('t1') as SubstrateToast
+    const t2 = document.getElementById('t2') as SubstrateToast
 
-    await waitFor('substrate-toast')
+    t1.toast()
+    t2.toast()
+    await sleep(50)
 
-    const toast1 = document.getElementById('toast1')
-    const toast2 = document.getElementById('toast2')
-    const toast3 = document.getElementById('toast3')
-
-    t.ok(toast1, 'First toast should exist')
-    t.ok(toast2, 'Second toast should exist')
-    t.ok(toast3, 'Third toast should exist')
+    t.ok(t1.classList.contains('toast-visible'), 'First toast visible')
+    t.ok(t2.classList.contains('toast-visible'), 'Second toast visible')
 })
 
-test('should have toast and hide methods', async t => {
+test('a sticky toast does not block a later transient toast', async t => {
     clearToasts()
-
     document.body.innerHTML = `
-        <substrate-toast class="t1" open timeout="0">
-            Toast 1
-        </substrate-toast>
+        <substrate-toast id="sticky" timeout="0">Sticky</substrate-toast>
     `
+    await waitFor('#sticky', { visible: false })
+    const sticky = document.getElementById('sticky') as SubstrateToast
+    sticky.toast()
+    await sleep(50)
+    t.ok(sticky.classList.contains('toast-visible'), 'Sticky toast visible')
 
-    const toast = await waitFor('substrate-toast') as SubstrateToast
-    t.ok(typeof toast.toast === 'function',
-        'Should have toast method')
-    t.ok(typeof toast.hide === 'function',
-        'Should have hide method')
+    // Use insertAdjacentHTML, not `innerHTML +=`: the latter serialises
+    // and re-parses the whole body, detaching `sticky` (which is already
+    // registered in visibleToasts) without ever calling disconnectedCallback
+    // (that lands in Phase 4), leaking a stale entry into the registry
+    // for the rest of the test run.
+    document.body.insertAdjacentHTML('beforeend', `
+        <substrate-toast id="transient" timeout="3000">Transient</substrate-toast>
+    `)
+    await waitFor('#transient', { visible: false })
+    const transient = document.getElementById('transient') as SubstrateToast
+    transient.toast()
+    await sleep(50)
+
+    t.ok(transient.classList.contains('toast-visible'),
+        'Transient toast becomes visible while the sticky toast is still showing')
+})
+
+test('the second toast in a stack gets a non-zero offset, the first stays at 0', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="s1" timeout="0">First</substrate-toast>
+        <substrate-toast id="s2" timeout="0">Second</substrate-toast>
+    `
+    await waitFor('#s1', { visible: false })
+    const s1 = document.getElementById('s1') as SubstrateToast
+    const s2 = document.getElementById('s2') as SubstrateToast
+
+    s1.toast()
+    await sleep(50)
+    s2.toast()
+    await sleep(50)
+
+    t.equal(s1.style.getPropertyValue('--toast-offset'), '0px',
+        'First toast sits at offset 0')
+    const secondOffset = s2.style.getPropertyValue('--toast-offset')
+    t.ok(secondOffset !== '' && secondOffset !== '0px',
+        'Second toast has a non-zero offset')
+})
+
+test('the remaining toast reflows to offset 0 when the first is hidden', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="r1" timeout="0">First</substrate-toast>
+        <substrate-toast id="r2" timeout="0">Second</substrate-toast>
+    `
+    await waitFor('#r1', { visible: false })
+    const r1 = document.getElementById('r1') as SubstrateToast
+    const r2 = document.getElementById('r2') as SubstrateToast
+
+    r1.toast()
+    await sleep(50)
+    r2.toast()
+    await sleep(50)
+
+    r1.hide()
+
+    t.equal(r2.style.getPropertyValue('--toast-offset'), '0px',
+        'Second toast recomputes to offset 0 immediately after the first is hidden')
+})
+
+test('toasts in different positions get independent offset-0 groups', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="tr" position="top-right" timeout="0">TR</substrate-toast>
+        <substrate-toast id="bl" position="bottom-left" timeout="0">BL</substrate-toast>
+    `
+    await waitFor('#tr', { visible: false })
+    const tr = document.getElementById('tr') as SubstrateToast
+    const bl = document.getElementById('bl') as SubstrateToast
+
+    tr.toast()
+    await sleep(50)
+    bl.toast()
+    await sleep(50)
+
+    t.equal(tr.style.getPropertyValue('--toast-offset'), '0px',
+        'top-right toast is at offset 0')
+    t.equal(bl.style.getPropertyValue('--toast-offset'), '0px',
+        'bottom-left toast is at its own offset 0, independent of the top-right group')
+})
+
+test('bottom-anchored stacks offset in the negative direction', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="br1" position="bottom-right" timeout="0">First</substrate-toast>
+        <substrate-toast id="br2" position="bottom-right" timeout="0">Second</substrate-toast>
+    `
+    await waitFor('#br1', { visible: false })
+    const br1 = document.getElementById('br1') as SubstrateToast
+    const br2 = document.getElementById('br2') as SubstrateToast
+
+    br1.toast()
+    await sleep(50)
+    br2.toast()
+    await sleep(50)
+
+    const offset = br2.style.getPropertyValue('--toast-offset')
+    t.ok(offset.startsWith('-'),
+        'Second toast in a bottom-anchored stack has a negative offset')
+})
+
+test('removing a toast from the DOM directly deregisters it and reflows the rest', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="d1" timeout="0">First</substrate-toast>
+        <substrate-toast id="d2" timeout="0">Second</substrate-toast>
+    `
+    await waitFor('#d1', { visible: false })
+    const d1 = document.getElementById('d1') as SubstrateToast
+    const d2 = document.getElementById('d2') as SubstrateToast
+
+    d1.toast()
+    await sleep(50)
+    d2.toast()
+    await sleep(50)
+
+    d1.remove()
+
+    t.equal(d2.style.getPropertyValue('--toast-offset'), '0px',
+        'Second toast recomputes to offset 0 after the first is removed from the DOM directly (not via hide())')
+})
+
+test('a top-center toast is anchored to the top edge', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="tc" position="top-center" timeout="0">Top center</substrate-toast>
+    `
+    await waitFor('#tc', { visible: false })
+    const tc = document.getElementById('tc') as SubstrateToast
+    tc.toast()
+    await sleep(50)
+
+    t.equal(getComputedStyle(tc).top, '16px',
+        'top-center toast is anchored 1rem (16px) from the top edge')
+})
+
+test('a bottom-anchored toast has top set to auto (regression: both top and bottom were set)', async t => {
+    clearToasts()
+    document.body.innerHTML = `
+        <substrate-toast id="br" position="bottom-right" timeout="0">Bottom right</substrate-toast>
+    `
+    await waitFor('#br', { visible: false })
+    const br = document.getElementById('br') as SubstrateToast
+    br.toast()
+    await sleep(50)
+
+    const computed = getComputedStyle(br)
+    t.notEqual(computed.top, '16px',
+        'bottom-anchored toast should not have top pinned to the inset value (regression: top and bottom were both set to 16px, stretching the box to full viewport height)')
+    t.equal(computed.bottom, '16px',
+        'bottom-anchored toast should have bottom set to 1rem (16px)')
 })
 
 // ============================================================================
@@ -324,5 +470,8 @@ test('all done', () => {
 
 // Helper to clear DOM between tests
 function clearToasts () {
-    document.querySelectorAll('substrate-toast').forEach(el => el.remove())
+    document.querySelectorAll('substrate-toast').forEach(el => {
+        (el as SubstrateToast).hide()
+        el.remove()
+    })
 }

@@ -19,6 +19,8 @@ substrate-toast {
     --toast-line-height: 1.5;
     --toast-max-width: 24rem;
     --toast-border: #0003;
+    --toast-stack-gap: 0.75rem;
+    --toast-inset: 1rem;          /* distance from the anchored edge */
 
     /* Variant colors - can be customized */
     /* primary */
@@ -47,11 +49,13 @@ substrate-toast {
     --toast-danger-text: #991b1b;
     --toast-danger-icon: #ef4444;
 
-    /* Position toasts in top-right */
+    /* Position: fixed; the exact edge is set by the anchor rules
+       below, keyed off the `position` attribute (default top-right) */
     position: fixed;
-    top: 1rem;
-    inset-inline-end: 1rem;
     z-index: 1000;
+    transform:
+        translateX(var(--toast-x, 0))
+        translateY(var(--toast-offset, 0));
 
     /* Hidden by default */
     opacity: 0;
@@ -59,7 +63,10 @@ substrate-toast {
     pointer-events: none;
 
     /* animation */
-    transition: opacity 0.3s ease, visibility 0s ease 0.3s;
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease,
+        visibility 0s ease 0.3s;
 
 
     /**
@@ -73,7 +80,10 @@ substrate-toast {
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
-        transition: opacity 0.3s ease, visibility 0s ease 0s;
+        transition:
+            opacity 0.3s ease,
+            transform 0.3s ease,
+            visibility 0s ease 0s;
 
         & .toast {
             transform: scale(1);
@@ -218,6 +228,46 @@ substrate-toast {
     }
 }
 
+/* Anchor rules, keyed off the `position` attribute. Default (no
+   attribute, or explicit top-right) matches pre-stacking behavior. */
+
+/* Top-anchored positions */
+substrate-toast:not([position]),
+substrate-toast[position="top-left"],
+substrate-toast[position="top-right"],
+substrate-toast[position="top-center"] {
+    top: var(--toast-inset);
+}
+
+/* Bottom-anchored positions */
+substrate-toast[position="bottom-left"],
+substrate-toast[position="bottom-right"],
+substrate-toast[position="bottom-center"] {
+    bottom: var(--toast-inset);
+}
+
+/* Right-aligned positions */
+substrate-toast:not([position]),
+substrate-toast[position="top-right"],
+substrate-toast[position="bottom-right"] {
+    inset-inline-end: var(--toast-inset);
+}
+
+/* Left-aligned positions */
+substrate-toast[position="top-left"],
+substrate-toast[position="bottom-left"] {
+    left: var(--toast-inset);
+    inset-inline-end: auto;
+}
+
+/* Center-aligned positions */
+substrate-toast[position="top-center"],
+substrate-toast[position="bottom-center"] {
+    left: 50%;
+    inset-inline-end: auto;
+
+    --toast-x: -50%;
+}
 
 /* Content */
 .toast-content {
