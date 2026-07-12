@@ -19,6 +19,7 @@ substrate-toast {
     --toast-line-height: 1.5;
     --toast-max-width: 24rem;
     --toast-border: #0003;
+    --toast-stack-gap: 0.75rem;
 
     /* Variant colors - can be customized */
     /* primary */
