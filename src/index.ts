@@ -26,25 +26,6 @@ declare global {
     }
 }
 
-function processToastQueue ():void {
-    // If there's already a toast showing, don't process queue
-    if (currentToast) return
-
-    // If queue is empty, nothing to do
-    if (toastQueue.length === 0) return
-
-    // Get next toast from queue
-    const toast = toastQueue.shift()
-    if (!toast) return
-
-    currentToast = toast
-
-    // Trigger show animation
-    requestAnimationFrame(() => {
-        toast._showToast()
-    })
-}
-
 export const VARIANTS:ToastVariant[] = [
     'primary',
     'success',
@@ -372,3 +353,22 @@ export class SubstrateToast extends WebComponent.create('substrate-toast') {
 }
 
 define('substrate-toast', SubstrateToast)
+
+function processToastQueue ():void {
+    // If there's already a toast showing, don't process queue
+    if (currentToast) return
+
+    // If queue is empty, nothing to do
+    if (toastQueue.length === 0) return
+
+    // Get next toast from queue
+    const toast = toastQueue.shift()
+    if (!toast) return
+
+    currentToast = toast
+
+    // Trigger show animation
+    requestAnimationFrame(() => {
+        toast._showToast()
+    })
+}
